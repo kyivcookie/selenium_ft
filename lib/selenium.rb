@@ -2,6 +2,7 @@ require 'selenium-webdriver'
 require 'logger'
 
 class Selenium_driver
+
   def initialize
     @driver = Selenium::WebDriver.for :firefox
     @timer = Selenium::WebDriver::Wait.new(:timeout => 60)
@@ -63,6 +64,7 @@ class Selenium_driver
   end
 
   def close_logger
+    self.info_log({:message => "-----------------------------------------------------------------------"})
     @logger.close
   end
 
@@ -73,6 +75,5 @@ class Selenium_driver
   def start_log
     self.info_log({:message => "-----------------------------------------------------------------------"})
     self.info_log({:message => "Testing for #{@url} is started..."})
-    #self.info_log({:message => "-----------------------------------------------------------------------"})
   end
 end
