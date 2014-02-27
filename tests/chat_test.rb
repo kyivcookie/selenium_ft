@@ -29,6 +29,7 @@ class ChatTest
       d.find_single_element :attr => :id, :value => 'ggChat_send', :click => 1
       if d.check_errors == 1
         d.info_log :message => "TEST ERROR..."
+        d.info_log :message => "JS Errors was detecded: #{d.get_js_error_feedback}"
       else
         d.info_log :message => "TEST OK..."
       end

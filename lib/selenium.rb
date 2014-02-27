@@ -4,7 +4,10 @@ require 'logger'
 class Selenium_driver
 
   def initialize
-    @driver = Selenium::WebDriver.for :firefox
+    profile = Selenium::WebDriver::Firefox::Profile.new
+    profile.add_extension 'extensions/JSErrorCollector.xpi' rescue p "Cannot add JSErrorCollector.xpi to profile"
+    @driver = Selenium::WebDriver.for :firefox, :profile => profile
+
     @timer = Selenium::WebDriver::Wait.new(:timeout => 60)
     @logger = Logger.new('logs/log.txt')
     @logger.level = Logger::INFO
@@ -75,5 +78,23 @@ class Selenium_driver
   def start_log
     self.info_log({:message => "-----------------------------------------------------------------------"})
     self.info_log({:message => "Testing for #{@url} is started..."})
+  end
+
+  #Function that returns a string that presents the details of the occurred JS errors
+  def get_js_error_feedback
+    jserror_descriptions = ""
+    begin
+      jserrors = @driver.execute_script("return window.JSErrorCollector_errors.pump()")
+      jserrors.each do |jserror|
+        @logger.debug "ERROR: JS error detected:\n#{jserror["errorMessage"]} (#{jserror["sourceName"]}:#{jserror["lineNumber"]})"
+
+        jserror_descriptions += "JS error detected:
+   #{jserror["errorMessage"]} (#{jserror["sourceName"]}:#{jserror["lineNumber"]})
+"
+      end
+    rescue Exception => e
+      @logger.debug "Checking for JS errors failed with: #{e.message}"
+    end
+    jserror_descriptions
   end
 end
