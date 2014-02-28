@@ -1,5 +1,5 @@
 *~
 *.log
-logs/
-sites/
+logs
+sites
 .idea/*

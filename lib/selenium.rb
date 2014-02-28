@@ -7,9 +7,8 @@ class Selenium_driver
     profile = Selenium::WebDriver::Firefox::Profile.new
     profile.add_extension 'extensions/JSErrorCollector.xpi' rescue p "Cannot add JSErrorCollector.xpi to profile"
     @driver = Selenium::WebDriver.for :firefox, :profile => profile
-
-    @timer = Selenium::WebDriver::Wait.new(:timeout => 60)
-    @logger = Logger.new('logs/log.txt')
+    @timer = Selenium::WebDriver::Wait.new(:timeout => 6)
+    @logger = Logger.new('logs/log_test.txt')
     @logger.level = Logger::INFO
     @errors = 0
   end
@@ -17,8 +16,14 @@ class Selenium_driver
   def init(url)
     @url = url
     @errors = 0
-    @driver.navigate.to url
     self.start_log
+    begin
+      @driver.manage.timeouts.implicit_wait = 20
+      @driver.navigate.to url
+    rescue Exception => e
+      self.error_log({:message => "Failed to load url: #{@url}"})
+      self.close(false, e)
+    end
   end
 
   def find_single_element(h = {})
@@ -31,7 +36,7 @@ class Selenium_driver
       end
     rescue Exception
       self.error_log(h)
-      false
+      self.close(h)
     end
   end
 
@@ -41,7 +46,7 @@ class Selenium_driver
       t.until{@driver.find_element(h[:attr],h[:value])}
     rescue Exception
       self.error_log(h)
-      false
+      self.close(h)
     end
   end
 
@@ -53,12 +58,16 @@ class Selenium_driver
       t.until{@driver.find_elements(h[:attr],h[:value]).length > 2}
     rescue Exception
       self.error_log(h)
-      false
+      self.close(h)
     end
   end
 
   def error_log(o = {})
     @errors = 1
+    if o[:message]
+      @logger.error(o[:message])
+      return true
+    end
     @logger.error("Site: #{@url}: Can't find element with #{o[:attr]}:#{o[:value]}, skipping test.")
   end
 
@@ -66,9 +75,23 @@ class Selenium_driver
     @logger.info("#{o[:message]}")
   end
 
-  def close_logger
-    self.info_log({:message => "-----------------------------------------------------------------------"})
+  def close(o = {}, exception = false)
+    @errors = 1
+    jserror = self.get_js_error_feedback
+    if jserror
+      self.info_log({:message => self.get_js_error_feedback})
+    end
+    if exception
+      self.info_log({:message => exception.message})
+    end
+    self.info_log({:message => '-----------------------------------------------------------------------'})
     @logger.close
+    #@driver.quit
+  end
+
+  def end_test
+    @logger.close
+    @driver.quit
   end
 
   def check_errors
@@ -76,7 +99,7 @@ class Selenium_driver
   end
 
   def start_log
-    self.info_log({:message => "-----------------------------------------------------------------------"})
+    self.info_log({:message => '-----------------------------------------------------------------------'})
     self.info_log({:message => "Testing for #{@url} is started..."})
   end
 
@@ -86,10 +109,8 @@ class Selenium_driver
     begin
       jserrors = @driver.execute_script("return window.JSErrorCollector_errors.pump()")
       jserrors.each do |jserror|
-        @logger.debug "ERROR: JS error detected:\n#{jserror["errorMessage"]} (#{jserror["sourceName"]}:#{jserror["lineNumber"]})"
-
-        jserror_descriptions += "JS error detected:
-   #{jserror["errorMessage"]} (#{jserror["sourceName"]}:#{jserror["lineNumber"]})
+        @logger.debug "ERROR: JS error detected:\n#{jserror['errorMessage']} (#{jserror['sourceName']}:#{jserror['lineNumber']})"
+        jserror_descriptions += "JS error detected:#{jserror['errorMessage']} (#{jserror['sourceName']}:#{jserror['lineNumber']})
 "
       end
     rescue Exception => e
