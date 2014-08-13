@@ -18,7 +18,7 @@ class Selenium_driver
     @errors = 0
     self.start_log
     begin
-      @driver.manage.timeouts.implicit_wait = 20
+      #@driver.manage.timeouts.implicit_wait = 20
       @driver.navigate.to url
     rescue Exception => e
       self.error_log({:message => "Failed to load url: #{@url}"})
@@ -35,8 +35,10 @@ class Selenium_driver
         item.click if h[:click]
       end
     rescue Exception
-      self.error_log(h)
-      self.close(h)
+      #unless h[:skip_error]
+        self.error_log(h)
+        self.close(h)
+      #end
     end
   end
 
@@ -76,7 +78,6 @@ class Selenium_driver
   end
 
   def close(o = {}, exception = false)
-    @errors = 1
     jserror = self.get_js_error_feedback
     if jserror
       self.info_log({:message => self.get_js_error_feedback})
@@ -85,7 +86,7 @@ class Selenium_driver
       self.info_log({:message => exception.message})
     end
     self.info_log({:message => '-----------------------------------------------------------------------'})
-    @logger.close
+    #@logger.close
     #@driver.quit
   end
 
